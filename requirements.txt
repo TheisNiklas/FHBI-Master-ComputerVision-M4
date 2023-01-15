@@ -1,0 +1,8 @@
+numpy
+tensorflow-gpu
+pandas
+ipykernel
+pillow
+matplotlib
+tensorflow-datasets
+scipy

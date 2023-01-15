@@ -1,0 +1,9 @@
+[core]
+    autostage = true
+    remote = azureblob
+[cache]
+    type = "hardlink,symlink"
+['remote "azureblob"']
+    url = azure://milestone4
+    account_name = fhbicomputervisiondata
+    connection_string = DefaultEndpointsProtocol=https;AccountName=fhbicomputervisiondata;AccountKey=RJoNeGsgXy8VwesTvkQF3ZKpDCtjT9VdMFV/9iwAu1HcKCiZbD1h/hv1tQ4JatvgMIYOf12WGq6S+ASt/w0ZWg==;EndpointSuffix=core.windows.net

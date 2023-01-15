@@ -1,0 +1,4 @@
+.env/
+/data
+/data_rejected
+*/__pycache__/
