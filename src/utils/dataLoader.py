@@ -61,7 +61,7 @@ class DataLoader:
         return self.__createDatasets(dataset, dsSize, batchSize)
     
     def loadDatasetsPairs(
-        self, relDataDir: str, preprocessedDataName: str , batchSize: int
+        self, relDataDir: str, preprocessedDataName: str , batchSize: int, crop: bool = True
     ) -> tuple[tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]:
         """
         Loads a dataset and split it into train, validation and test datasets
@@ -79,8 +79,11 @@ class DataLoader:
         compare_images = metaData["compare"]
         labels = metaData["label"]
         
-        dataset = tf.data.Dataset.from_tensor_slices([anchor_images, compare_images], labels)
-        dataset = dataset.map(DataLoader.decode_imgs)
+        dataset = tf.data.Dataset.from_tensor_slices((anchor_images, compare_images, labels))
+        if crop:
+            dataset = dataset.map(DataLoader.decode_imgs)
+        else:
+            dataset = dataset.map(DataLoader.decode_imgs_no_crop)
         
         dsSize = dataset.__len__().numpy()
         return self.__createDatasets(dataset, dsSize, batchSize)
@@ -106,23 +109,44 @@ class DataLoader:
         return img
     
     @staticmethod
-    def decode_imgs(img1_path: str, img2_path: str, label: str):
+    def decode_imgs(img_path1: str, img_path2: str, label: str):
         image_size = (224, 224)
         num_channels = 3
-        img1 = tf.io.read_file(img1_path)
+        img1 = tf.io.read_file(img_path1)
+        img1 = tf.image.decode_image(
+            img1, channels=num_channels, expand_animations=False
+        )
+        img1 = tf.image.central_crop(img1, 0.7)
+        img1 = tf.image.resize(img1, image_size, method="bilinear")
+        img1.set_shape((image_size[0], image_size[1], num_channels))
+        
+        img2 = tf.io.read_file(img_path2)
+        img2 = tf.image.decode_image(
+            img2, channels=num_channels, expand_animations=False
+        )
+        img2 = tf.image.central_crop(img2, 0.7)
+        img2 = tf.image.resize(img2, image_size, method="bilinear")
+        img2.set_shape((image_size[0], image_size[1], num_channels))
+        return {"input_anchor": img1, "input_compare": img2}, label
+    
+    @staticmethod
+    def decode_imgs_no_crop(img_path1: str, img_path2: str, label: str):
+        image_size = (224, 224)
+        num_channels = 3
+        img1 = tf.io.read_file(img_path1)
         img1 = tf.image.decode_image(
             img1, channels=num_channels, expand_animations=False
         )
         img1 = tf.image.resize(img1, image_size, method="bilinear")
         img1.set_shape((image_size[0], image_size[1], num_channels))
         
-        img2 = tf.io.read_file(img2_path)
+        img2 = tf.io.read_file(img_path2)
         img2 = tf.image.decode_image(
             img2, channels=num_channels, expand_animations=False
         )
         img2 = tf.image.resize(img2, image_size, method="bilinear")
         img2.set_shape((image_size[0], image_size[1], num_channels))
-        return img1, img2, label
+        return {"input_anchor": img1, "input_compare": img2}, label
     
     @staticmethod
     def __readImage(image_file, label):

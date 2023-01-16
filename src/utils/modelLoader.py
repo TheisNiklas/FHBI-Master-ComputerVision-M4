@@ -35,12 +35,13 @@ class ModelLoader:
         model: tf.keras.Model = baseModel(preprocess_layer)
         
         feature_extractor = tf.keras.layers.Flatten()(baseModel.output)
-        feature_extractor = tf.keras.layers.Dense(1, activation="sigmoid")(feature_extractor)
         feature_extractor = tf.keras.layers.Dense(512, activation="relu")(feature_extractor)
         feature_extractor = tf.keras.layers.BatchNormalization()(feature_extractor)
+        feature_extractor = tf.keras.layers.Dropout(0.3)(feature_extractor)
         feature_extractor = tf.keras.layers.Dense(256, activation="relu")(feature_extractor)
         feature_extractor = tf.keras.layers.BatchNormalization()(feature_extractor)
-        output = tf.keras.layers.Dense(256)(feature_extractor)
+        feature_extractor = tf.keras.layers.Dropout(0.3)(feature_extractor)
+        output = tf.keras.layers.Dense(128)(feature_extractor)
         
         embedding = tf.keras.Model(baseModel.input, output, name="Embedding")
         
@@ -68,7 +69,7 @@ class ModelLoader:
             weights="imagenet",  # type: ignore
         )
         
-        baseModel.trainable = False
+        baseModel.trainable = True
         
         
         inputs = tf.keras.Input(shape=(self.imgWidth, self.imgHeight, self.imgDepth), name="input")
@@ -78,23 +79,26 @@ class ModelLoader:
         
         feature_extractor = tf.keras.layers.Flatten()(baseModel.output)
         feature_extractor = tf.keras.layers.Dense(512, activation="relu")(feature_extractor)
-        feature_extractor = tf.keras.layers.Dropout(0.2)(feature_extractor)
         feature_extractor = tf.keras.layers.BatchNormalization()(feature_extractor)
+        feature_extractor = tf.keras.layers.Dropout(0.3)(feature_extractor)
         feature_extractor = tf.keras.layers.Dense(256, activation="relu")(feature_extractor)
-        feature_extractor = tf.keras.layers.Dropout(0.2)(feature_extractor)
         feature_extractor = tf.keras.layers.BatchNormalization()(feature_extractor)
-        output = tf.keras.layers.Dense(256)(feature_extractor)
+        feature_extractor = tf.keras.layers.Dropout(0.3)(feature_extractor)
+        output = tf.keras.layers.Dense(128)(feature_extractor)
         
         embedding = tf.keras.Model(baseModel.input, output, name="Embedding")
         
-        img1 = tf.keras.layers.Input(shape=(self.imgWidth, self.imgHeight, self.imgDepth))
-        img2 =  tf.keras.layers.Input( shape=(self.imgWidth, self.imgHeight, self.imgDepth))
+        img1 = tf.keras.layers.Input(shape=(self.imgWidth, self.imgHeight, self.imgDepth), name="input_anchor")
+        img2 = tf.keras.layers.Input(shape=(self.imgWidth, self.imgHeight, self.imgDepth), name="input_compare")
         featsA = embedding(img1)
         featsB = embedding(img2)
         
-        distance = tf.keras.layers.Lambda(ModelLoader.euclidean_distance)([featsA, featsB])
+        #distance = tf.keras.layers.Lambda(ModelLoader.euclidean_distance)([featsA, featsB])
         
-        outputs = tf.keras.layers.Dense(1, activation="sigmoid")(distance)
+        distance = tf.keras.layers.Subtract()([featsA, featsB])
+        distance_abs = tf.keras.layers.Lambda(lambda x: abs(x))(distance)
+        
+        outputs = tf.keras.layers.Dense(1, activation="sigmoid")(distance_abs)
         model = tf.keras.Model(inputs=[img1, img2], outputs=outputs)
         
         return model, embedding
